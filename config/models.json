@@ -1,0 +1,63 @@
+{
+  "providers": [
+    {"id":"codex-subscription","label":"ChatGPT 订阅（Codex）","credential":"chatgpt-login","supportsPdf":true},
+    {"id":"openai-api","label":"OpenAI API","credential":"api-key","supportsPdf":true},
+    {"id":"deepseek-api","label":"DeepSeek API","credential":"api-key","supportsPdf":false},
+    {"id":"anthropic-api","label":"Claude API","credential":"api-key","supportsPdf":true},
+    {"id":"openai-compatible","label":"自定义兼容 API","credential":"api-key","supportsPdf":false,"customEndpoint":true}
+  ],
+  "models": [
+    {"id":"gpt-5.6-luna","label":"GPT-5.6 Luna","providers":["codex-subscription","openai-api"],"efforts":["none","low","medium","high","xhigh","max"]},
+    {"id":"gpt-5.6-terra","label":"GPT-5.6 Terra","providers":["codex-subscription","openai-api"],"efforts":["none","low","medium","high","xhigh","max"]},
+    {"id":"gpt-5.6-sol","label":"GPT-5.6 Sol","providers":["codex-subscription","openai-api"],"efforts":["none","low","medium","high","xhigh","max"]},
+    {"id":"deepseek-chat","label":"DeepSeek Chat","providers":["deepseek-api"],"efforts":["none"]},
+    {"id":"deepseek-reasoner","label":"DeepSeek Reasoner","providers":["deepseek-api"],"efforts":["none"]},
+    {"id":"claude-haiku-4-5-20251001","label":"Claude Haiku 4.5","providers":["anthropic-api"],"efforts":["none"]},
+    {"id":"claude-sonnet-5","label":"Claude Sonnet 5","providers":["anthropic-api"],"efforts":["low","medium","high","max"]},
+    {"id":"claude-opus-5","label":"Claude Opus 5","providers":["anthropic-api"],"efforts":["low","medium","high","max"]},
+    {"id":"__custom__","label":"自定义模型 ID","providers":["openai-compatible"],"efforts":["none","low","medium","high"]}
+  ],
+  "stages": [
+    {"id":"fulltext_analysis","label":"综合全文分析","description":"一次提取研究问题、实验方法、核心证据、局限性和主题候选。"},
+    {"id":"method_evidence","label":"方法与证据抽取","description":"生成实验条件卡、核心主张和证据定位。"},
+    {"id":"pdf_verification","label":"PDF 图表核验","description":"用原始 PDF 核验关键数字、图表、公式和解析异常。"},
+    {"id":"relation_discovery","label":"关系与主题发现","description":"发现同作者、同方法、方法对照和主题候选。"},
+    {"id":"note_synthesis","label":"记录综合校准","description":"对各阶段 PaperRecord 去重、补全与交叉核验；最终 Markdown 始终由固定 V5 渲染器生成。"}
+  ],
+  "presets": {
+    "quick": {
+      "fulltext_analysis":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "method_evidence":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "pdf_verification":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "relation_discovery":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":false},
+      "note_synthesis":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":false}
+    },
+    "standard": {
+      "fulltext_analysis":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "method_evidence":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "pdf_verification":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "relation_discovery":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":false},
+      "note_synthesis":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":false}
+    },
+    "deep": {
+      "fulltext_analysis":{"provider":"codex-subscription","model":"gpt-5.6-terra","effort":"medium","enabled":true},
+      "method_evidence":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "pdf_verification":{"provider":"codex-subscription","model":"gpt-5.6-terra","effort":"medium","enabled":true},
+      "relation_discovery":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":true},
+      "note_synthesis":{"provider":"codex-subscription","model":"gpt-5.6-luna","effort":"low","enabled":false}
+    },
+    "library": {
+      "fulltext_analysis":{"provider":"codex-subscription","model":"gpt-5.6-sol","effort":"high","enabled":true},
+      "method_evidence":{"provider":"codex-subscription","model":"gpt-5.6-sol","effort":"high","enabled":true},
+      "pdf_verification":{"provider":"codex-subscription","model":"gpt-5.6-sol","effort":"high","enabled":true},
+      "relation_discovery":{"provider":"codex-subscription","model":"gpt-5.6-terra","effort":"medium","enabled":true},
+      "note_synthesis":{"provider":"codex-subscription","model":"gpt-5.6-terra","effort":"medium","enabled":true}
+    }
+  },
+  "presetLimits": {
+    "quick": {"maxMarkdownChars":60000,"maxFindings":10,"stageTimeoutMinutes":4},
+    "standard": {"maxMarkdownChars":120000,"maxFindings":14,"stageTimeoutMinutes":6},
+    "deep": {"maxMarkdownChars":220000,"maxFindings":18,"stageTimeoutMinutes":12},
+    "library": {"maxMarkdownChars":220000,"maxFindings":18,"stageTimeoutMinutes":12}
+  }
+}

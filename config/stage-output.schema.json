@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "noteTitle": {"type": "string"},
+    "libraryFolder": {"type": "string"},
+    "summary": {"type": "string"},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category": {"type": "string", "enum": ["overview", "method", "evidence", "figure", "relation", "critique"]},
+          "claim": {"type": "string"},
+          "evidence": {"type": "string"},
+          "source": {"type": "string"},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        },
+        "required": ["category", "claim", "evidence", "source", "confidence"]
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "researchQuestions": {"type":"array","items":{"type":"string"}},
+        "innovations": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"title":{"type":"string"},"detail":{"type":"string"},"evidence":{"type":"string"},"source":{"type":"string"},"confidence":{"type":"string","enum":["high","medium","low"]}},"required":["title","detail","evidence","source","confidence"]}},
+        "methods": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"step":{"type":"string"},"materials":{"type":"string"},"parameters":{"type":"string"},"purpose":{"type":"string"},"source":{"type":"string"},"confidence":{"type":"string","enum":["high","medium","low"]}},"required":["step","materials","parameters","purpose","source","confidence"]}},
+        "samplesControls": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"sample":{"type":"string"},"role":{"type":"string"},"composition":{"type":"string"},"source":{"type":"string"},"confidence":{"type":"string","enum":["high","medium","low"]}},"required":["sample","role","composition","source","confidence"]}},
+        "characterizations": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"method":{"type":"string"},"sample":{"type":"string"},"signal":{"type":"string"},"assignment":{"type":"string"},"source":{"type":"string"},"confidence":{"type":"string","enum":["high","medium","low"]}},"required":["method","sample","signal","assignment","source","confidence"]}},
+        "results": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"topic":{"type":"string"},"metric":{"type":"string"},"sample":{"type":"string"},"value":{"type":"string"},"baseline":{"type":"string"},"change":{"type":"string"},"condition":{"type":"string"},"interpretation":{"type":"string"},"source":{"type":"string"},"confidence":{"type":"string","enum":["high","medium","low"]},"figureRefs":{"type":"array","items":{"type":"string"}}},"required":["topic","metric","sample","value","baseline","change","condition","interpretation","source","confidence","figureRefs"]}},
+        "figures": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"figureId":{"type":"string"},"purpose":{"type":"string"},"finding":{"type":"string"},"source":{"type":"string"}},"required":["figureId","purpose","finding","source"]}},
+        "claims": {"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"claim":{"type":"string"},"evidence":{"type":"string"},"source":{"type":"string"},"strength":{"type":"string"},"alternative":{"type":"string"}},"required":["claim","evidence","source","strength","alternative"]}},
+        "limitations": {"type":"array","items":{"type":"string"}},
+        "relations": {"type":"array","items":{"type":"string"}},
+        "pending": {"type":"array","items":{"type":"string"}}
+      },
+      "required": ["researchQuestions","innovations","methods","samplesControls","characterizations","results","figures","claims","limitations","relations","pending"]
+    }
+  },
+  "required": ["noteTitle", "libraryFolder", "summary", "findings", "warnings", "record"]
+}

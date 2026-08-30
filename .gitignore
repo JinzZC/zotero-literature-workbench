@@ -1,0 +1,16 @@
+data/
+.env
+.env.*
+!.env.example
+*.log
+artifacts/
+scripts/internal/
+test_ui.mjs
+test_parallel_ui.mjs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+coverage/
+node_modules/
+npm-debug.log*

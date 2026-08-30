@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>文献工作台</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/local-settings.css">
+</head>
+<body>
+  <div class="grain"></div>
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">LOCAL RESEARCH INSTRUMENT / 01</div>
+      <h1>文献工作台</h1>
+    </div>
+    <div class="health-strip">
+      <span id="zoteroHealth" class="signal"><i></i>Zotero</span>
+      <span id="openaiHealth" class="signal"><i></i>模型通道</span>
+      <span id="vaultHealth" class="signal"><i></i>Obsidian</span>
+    </div>
+  </header>
+
+  <main class="instrument-grid">
+    <aside class="panel collections-panel">
+      <div class="panel-head">
+        <div><small>01 / SOURCE</small><h2>Zotero 目录</h2></div>
+        <div class="collection-tools"><button id="toggleCollections" class="icon-button" title="全部折叠或展开">⇵</button><button id="refreshCollections" class="icon-button" title="刷新">↻</button></div>
+      </div>
+      <button class="collection all active" data-key=""><span>全部文献</span><b>ALL</b></button>
+      <div id="collectionTree" class="collection-tree"><div class="skeleton tall"></div></div>
+    </aside>
+
+    <section class="panel library-panel">
+      <div class="panel-head library-head">
+        <div><small>02 / SELECT</small><h2>选择文献</h2></div>
+        <label class="search"><span>⌕</span><input id="searchInput" placeholder="题名、作者、DOI、标签"></label>
+      </div>
+      <div class="table-tools">
+        <label class="check-label"><input id="selectAll" type="checkbox"><span>全选当前页</span></label>
+        <span id="selectionCount" class="selection-count">已选 0 篇</span>
+        <select id="statusFilter"><option value="all">全部状态</option><option value="ready">可以处理</option><option value="missing-mineru">缺少 MinerU</option><option value="missing-pdf">缺少 PDF</option></select>
+      </div>
+      <div class="literature-table-wrap">
+        <table class="literature-table">
+          <thead><tr><th></th><th>文献</th><th>年份</th><th>附件状态</th></tr></thead>
+          <tbody id="literatureRows"><tr><td colspan="4"><div class="skeleton"></div></td></tr></tbody>
+        </table>
+      </div>
+      <div id="attachmentDrawer" class="attachment-drawer" hidden></div>
+    </section>
+
+    <aside class="panel config-panel">
+      <div class="panel-head">
+        <div><small>03 / CONFIGURE</small><h2>处理设置</h2></div>
+        <span class="badge">Responses API</span>
+      </div>
+      <label class="field"><span>批次名称</span><input id="batchName" value="新文献处理"></label>
+      <div class="batch-context-card">
+        <div class="batch-context-head"><span>阅读任务背景</span><b>单篇 / 批次均可</b></div>
+        <textarea id="batchContext" maxlength="1200" placeholder="例如：这是后续实验的基石和绝对核心文献。请优先提取可复现实验条件、关键证据链、技术路线及对后续实验设计的直接启发。"></textarea>
+        <div id="batchHints" class="batch-hints"><span>可直接填写，也可使用下方快捷提示</span></div>
+      </div>
+      <div id="libraryProfile" class="library-profile unified-profile">
+        <div class="library-profile-mark">V5 / UNIFIED QUALITY GATE</div>
+        <strong>统一入库标准</strong>
+        <p>每篇文献固定执行五阶段完整分析、原始 PDF 核验、可靠图文映射、关键数值与表征峰位提取、双向关系发现和 V5 质量门禁。处理质量不再提供降档选项。</p>
+        <div class="quality-spec"><span>22 万字符</span><span>18 条核心证据</span><span>12 分钟阶段上限</span></div>
+      </div>
+      <div class="parallel-card">
+        <div class="parallel-copy"><span>并行阅读</span><b id="parallelSummary">多篇智能 · 默认 2 篇</b><small id="agentSummary">单篇多 Agent · 同时 2 个阶段</small></div>
+        <div class="parallel-controls">
+          <div class="parallel-control-row"><label><input id="smartParallel" class="switch" type="checkbox" checked><span>多篇智能</span></label><select id="maxParallelItems" aria-label="同时处理文献数"><option value="1">1 篇</option><option value="2" selected>2 篇</option><option value="3">3 篇</option></select></div>
+          <div class="parallel-control-row"><label><input id="singlePaperAgents" class="switch" type="checkbox" checked><span>阶段多 Agent</span></label><select id="maxParallelStages" aria-label="全批次同时运行阶段数"><option value="1">1 Agent</option><option value="2">2 Agents</option><option value="3" selected>3 Agents</option></select></div>
+        </div>
+      </div>
+      <div class="preset-actions unified-actions">
+        <button id="saveUnifiedSettings" type="button">保存当前模型配置</button>
+        <button id="resetUnifiedModels" type="button">恢复推荐模型</button>
+      </div>
+      <div id="costPreview" class="cost-preview">预计 2 次模型调用</div>
+      <div class="local-settings">
+        <strong>本地连接</strong>
+        <label class="field"><span>Obsidian 仓库绝对路径</span><input id="vaultPath" autocomplete="off" placeholder="例如 D:\\My Obsidian Vault"></label>
+        <label class="field"><span>AI 草稿目录（仓库内）</span><input id="draftFolder" autocomplete="off" value="01_收件箱/AI草稿"></label>
+        <p>路径和任务数据只保存在本机的 <code>data/</code>，不会进入公开仓库。</p>
+      </div>
+      <button id="advancedToggle" class="advanced-toggle"><span>高级设置</span><b>仅调整各阶段模型与推理强度；核心阶段不可关闭</b><i>⌄</i></button>
+      <div id="stageSettings" class="stage-settings"></div>
+      <div class="output-block">
+        <label class="field"><span>默认目录（逐篇主题优先）</span><input id="libraryFolder" value="未分类"></label>
+        <p class="classification-note">批次和共同作者不决定主题。AI 将依据每篇论文内容提出目录；这里仅在无法判断时作为兜底。</p>
+        <div class="path-preview">AI 草稿 → <code>01_收件箱/AI草稿/&lt;批次&gt;</code></div>
+      </div>
+      <button id="startJob" class="primary-action"><span>开始处理</span><b id="startJobCount">0 篇</b></button>
+      <p class="api-note">默认使用 ChatGPT 订阅；也可按阶段接入 OpenAI、DeepSeek、Claude 或其他兼容 API。</p>
+      <button id="configureKey" class="key-action" type="button">管理模型 API</button>
+    </aside>
+  </main>
+
+  <section class="queue-section">
+    <div class="queue-title"><small>04 / PROCESS</small><h2>任务队列</h2><button id="refreshJobs" class="text-button">刷新</button></div>
+    <div id="jobQueue" class="job-queue"><div class="empty-state">尚无处理任务</div></div>
+  </section>
+
+  <div id="toast" class="toast"></div>
+  <dialog id="keyDialog" class="key-dialog">
+    <form method="dialog" id="keyForm">
+      <small>LOCAL CREDENTIAL VAULT</small>
+      <h2>管理模型 API</h2>
+      <p>密钥只发送到本机服务，并使用 Windows DPAPI 分别加密；不会写入 Obsidian、任务日志或浏览器存储。</p>
+      <label class="field"><span>API 提供商</span><select id="keyProvider"></select></label>
+      <div id="providerState" class="provider-state"></div>
+      <div id="customEndpointFields" hidden>
+        <label class="field"><span>Base URL</span><input id="customBaseUrl" type="url" autocomplete="off" placeholder="https://api.example.com/v1"></label>
+        <label class="field"><span>模型 ID</span><input id="customModel" autocomplete="off" placeholder="model-name"></label>
+      </div>
+      <label class="field"><span>API Key</span><input id="apiKeyInput" type="password" autocomplete="off" placeholder="输入后在本机加密保存" required></label>
+      <div class="dialog-actions"><button value="cancel" type="button" id="cancelKey">取消</button><button value="default" type="submit">加密保存</button></div>
+    </form>
+  </dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
