@@ -4,6 +4,7 @@
   "additionalProperties": false,
   "properties": {
     "noteTitle": {"type": "string"},
+    "documentType": {"type":"string","enum":["research_article","review","systematic_review","meta_analysis","perspective","other"]},
     "libraryFolder": {"type": "string"},
     "summary": {"type": "string"},
     "findings": {
@@ -41,5 +42,5 @@
       "required": ["researchQuestions","innovations","methods","samplesControls","characterizations","results","figures","claims","limitations","relations","pending"]
     }
   },
-  "required": ["noteTitle", "libraryFolder", "summary", "findings", "warnings", "record"]
+  "required": ["noteTitle", "documentType", "libraryFolder", "summary", "findings", "warnings", "record"]
 }

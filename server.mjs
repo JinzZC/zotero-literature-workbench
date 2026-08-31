@@ -52,6 +52,8 @@ const defaultSettings = {
   ...modelConfig.presetLimits.library
 };
 const readJson = (file, fallback) => { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return structuredClone(fallback); } };
+// Optional per-item naming is private runtime data, never bundled in source.
+const localNoteOverrides = readJson(path.join(dataDir, "note-overrides.json"), {});
 const writeJson = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(value, null, 2), "utf8"); };
 function normalizeUnifiedConfig(input = {}) {
   const { presets: _legacyPresets, presetLimits: _legacyLimits, ...clean } = input || {};
@@ -274,6 +276,7 @@ async function uploadOpenAIFile(filePath, execution = null) {
   return payload.id;
 }
 const analysisQualityRequirements = stage => `所有处理模式（包括最简单模式）都必须保留以下核心质量要求：
+0. 首先填写 documentType：原创研究为 research_article，叙述性综述为 review，系统综述为 systematic_review，Meta 分析为 meta_analysis，观点/展望为 perspective。不得仅因材料科学论文包含背景综述就误判为综述。
 1. 创新点必须拆成互不重复的独立发现，每条使用“短标签：具体贡献”的写法，说明相对既有方法新在哪里，禁止把背景或普通结果冒充创新。
 2. 实验方法必须按“配方/材料—样品与对照—设备与环境—工艺步骤—表征/测试”拆分；claim 以不超过 12 个汉字的环节名开头，随后用分号列出浓度、配比、温度、时间、电压、压力、气氛、尺寸、速率等可复现实数值。不得把整段方法压成一条长句。
 3. 关键结果必须优先保留绝对值、基线/对照值、变化幅度、误差、样本条件和单位。原文有数值时，禁止只写“出现信号、显著提高、性能优异”等定性结论。
@@ -282,7 +285,8 @@ const analysisQualityRequirements = stage => `所有处理模式（包括最简�
 6. 所有任务执行统一入库标准：不得省略核心配方、关键实验参数、表征峰位、主要性能数值、关键对照、图文对应与证据定位。
 7. record 是唯一的 V5 笔记中间数据：全文阶段填写 researchQuestions、innovations、limitations；方法阶段填写 methods、samplesControls、characterizations；PDF阶段填写 results、figures、characterizations、claims、pending；关系阶段填写 relations；综合阶段对所有字段去重补全。当前阶段不负责的数组必须返回空数组，不能省略字段。
 8. results 中 value、baseline、change、condition 必须分字段填写；原文没有时填写空字符串，禁止用“显著提高”替代数值。figureRefs 只能填写原文明确引用的 Fig/Figure/Scheme 编号。
-9. 禁止浏览网络或使用新闻稿、机构网页、搜索摘要等外部来源补充论文内容。只能使用输入中提供的 Zotero 元数据、MinerU Markdown、原始 PDF 分页文本层、图清单和支持材料；视觉图形中无法从文本层可靠读取的数据必须列入 pending。`;
+9. 禁止浏览网络或使用新闻稿、机构网页、搜索摘要等外部来源补充论文内容。只能使用输入中提供的 Zotero 元数据、MinerU Markdown、原始 PDF 分页文本层、图清单和支持材料；视觉图形中无法从文本层可靠读取的数据必须列入 pending。
+10. 若 documentType 属于 review、systematic_review、meta_analysis 或 perspective，不得套用原创实验论文逻辑：methods 填写检索/纳入范围、分类框架、比较维度与证据评价方法；samplesControls 填写所覆盖的材料/方法类别及参照维度；results 填写互不重复的核心综合结论、共识、争议、趋势和边界条件；claims 填写综述主张及其引用证据范围。叙述性综述没有原始实验数值时必须如实保留定性证据，禁止虚构配方、样品或定量结果。`;
 async function openAI(stage, profile, input, fileId = null, limits = {}, execution = null) {
   const key = getProviderKey("openai-api");
   if (!key) throw new Error("未配置 OPENAI_API_KEY");
@@ -504,7 +508,7 @@ async function runItem(job, itemKey, execution, options = {}) {
     if (full) supplementaryMarkdownBlocks.push(`【支持材料 MinerU：${cache.key}】\n${fs.readFileSync(full, "utf8")}`);
   }
   const batchContext = String(job.config.batchContext || "").trim().slice(0, 1200);
-  const metadataContext = `题目：${view.title}\n作者：${view.creators.join(", ")}\n年份：${view.year}\nDOI：${view.doi}\n附件：${JSON.stringify(attachments)}${batchContext ? `\n用户提供的阅读任务背景与优先级要求（不作为论文事实证据）：${batchContext}` : ""}`;
+  const metadataContext = `题目：${view.title}\n作者：${view.creators.join(", ")}\n年份：${view.year}\nDOI：${view.doi}\n摘要：${view.abstract || "未提供"}\n附件：${JSON.stringify(attachments)}${batchContext ? `\n用户提供的阅读任务背景与优先级要求（不作为论文事实证据）：${batchContext}` : ""}`;
   const maxMarkdownChars = Math.max(20_000, Number(job.config.maxMarkdownChars || 120_000));
   const mainMarkdownPart = markdown.slice(0, Math.min(markdown.length, Math.floor(maxMarkdownChars * 0.7)));
   const supplementaryMarkdown = supplementaryMarkdownBlocks.join("\n\n");
@@ -535,7 +539,7 @@ async function runItem(job, itemKey, execution, options = {}) {
     if (outputs[stage.id]) { addEvent(job, stage.id, "skipped", "使用已保存的阶段结果"); return; }
     if (options.rerenderOnly) { addEvent(job, stage.id, "skipped", "历史任务重排：该阶段没有旧结果，不调用模型"); return; }
     if (stage.id === "pdf_verification" && !attachments.pdf.length) { addEvent(job, stage.id, "skipped", "没有主文 PDF"); return; }
-    const compactPrior = JSON.stringify(Object.fromEntries(Object.entries(outputs).map(([id, result]) => [id, { summary: result.summary, findings: result.findings, record: result.record, warnings: result.warnings }])));
+    const compactPrior = JSON.stringify(Object.fromEntries(Object.entries(outputs).map(([id, result]) => [id, { documentType: result.documentType, summary: result.summary, findings: result.findings, record: result.record, warnings: result.warnings }])));
     const stageInput = ["fulltext_analysis", "method_evidence"].includes(stage.id)
       ? markdownContext
       : stage.id === "pdf_verification"
@@ -601,12 +605,12 @@ async function runItem(job, itemKey, execution, options = {}) {
   const draftRoot = path.resolve(job.config.vaultPath, job.config.draftFolder, job.batchName);
   if (!draftRoot.startsWith(path.resolve(job.config.vaultPath) + path.sep)) throw new Error("草稿目录越界");
   fs.mkdirSync(draftRoot, { recursive: true });
-  const knownTitles = { "LG5PIGBM": "电双层自限域合成轻质超薄网状膜", "XBBHMC63": "分级配位与动态共价网络协同增韧可重加工环氧树脂", "5TL4R8AI": "自增强层状氧化钆-聚乙烯热中子屏蔽复合材料", "4QHQPL3S": "PFEEK分子量调控CF-PEEK浸润与界面", "6AWJIMZZ": "梯度模量界面协同增强CF-PEEK力学与抗冲击", "UAVRPHNS": "自固化液晶环氧树脂与可回收导热复合材料" };
+  const noteOverride = localNoteOverrides[itemKey] || {};
   const generatedTitle = Object.values(outputs).map(result => result?.noteTitle).find(Boolean);
-  const noteTitle = knownTitles[itemKey] || generatedTitle || view.title.slice(0, 42);
+  const noteTitle = noteOverride.title || generatedTitle || view.title.slice(0, 42);
   const filename = `${safeName(view.creators[0]?.split(" ").at(-1) || "Unknown")}-${view.year || "n.d."}-${safeName(noteTitle)}.md`;
   setItemProgress(job, itemKey, { stage: "figure_extraction" });
-  let note = renderLiteratureNoteV5(view, itemKey, attachments, outputs, job.config, figureAssets);
+  let note = renderLiteratureNoteV5(view, itemKey, attachments, outputs, { ...job.config, noteOverrides: localNoteOverrides }, figureAssets);
   if (cancellation) note = note.replace("处理状态: 完整\n", "处理状态: 部分\n").replace(/^(# .+)$/m, `$1\n\n> [!warning] 部分处理结果\n> 任务已停止；本笔记仅包含停止前完成的阶段，可在工作台继续处理后自动完善。`);
   setItemProgress(job, itemKey, { stage: "write_note" });
   const targetPath = path.join(draftRoot, filename);
@@ -734,12 +738,11 @@ function legacyRenderLibraryNoteV4(item, key, attachments, outputs, config, figu
   const figures = take("figure", 6), critique = take("critique", 5), relations = take("relation", 5);
   const warnings = [...new Set(Object.values(outputs).flatMap(result => result?.warnings || []).map(clean).filter(Boolean))].slice(0, 6);
   const suggestedTitle = Object.values(outputs).map(result => clean(result?.noteTitle)).find(Boolean);
-  const knownTitles = { "4QHQPL3S": "PFEEK分子量调控CF-PEEK浸润与界面", "6AWJIMZZ": "梯度模量界面协同增强CF-PEEK力学与抗冲击", "UAVRPHNS": "自固化液晶环氧树脂与可回收导热复合材料" };
-  const knownFolders = { "XBBHMC63": "动态共价环氧树脂", "7YIYEIFT": "低介电聚芳醚酮", "5TL4R8AI": "中子屏蔽复合材料" };
-  const cnTitle = knownTitles[key] || suggestedTitle || item.title;
+  const noteOverride = config.noteOverrides?.[key] || {};
+  const cnTitle = noteOverride.title || suggestedTitle || item.title;
   const proposedFolder = [outputs.note_synthesis, outputs.fulltext_analysis, outputs.method_evidence].map(result => clean(result?.libraryFolder)).find(value => value && !/[\\/]/.test(value) && /\p{Script=Han}/u.test(value));
   const fallbackFolder = clean(config.libraryFolder);
-  const folder = knownFolders[key] || proposedFolder || (/\p{Script=Han}/u.test(fallbackFolder) ? fallbackFolder : "未分类");
+  const folder = noteOverride.folder || proposedFolder || (/\p{Script=Han}/u.test(fallbackFolder) ? fallbackFolder : "未分类");
   const firstAuthor = item.creators[0]?.split(" ").at(-1) || "Unknown";
   const displayTitle = `${firstAuthor} et al. (${item.year || "n.d."}) — ${cnTitle}`;
   const models = Object.entries(config.stages).filter(([, value]) => value.enabled).map(([stage, value]) => `${stage}:${value.provider || "codex-subscription"}/${value.model}/${value.effort}`).join("; ");
@@ -1017,11 +1020,7 @@ function legacyRenderNoteV2(item, key, attachments, outputs, config) {
 function legacyRenderNoteV3(item, key, attachments, outputs, config, figureAssets = []) {
   return legacyRenderLibraryNoteV4(item, key, attachments, outputs, config, figureAssets);
   /* Legacy v3 renderer retained below only for migration reference. */
-  const knownTitles = {
-    "4QHQPL3S": "PFEEK分子量调控CF-PEEK浸润与界面",
-    "6AWJIMZZ": "梯度模量界面协同增强CF-PEEK力学与抗冲击",
-    "UAVRPHNS": "自固化液晶环氧树脂与可回收导热复合材料"
-  };
+  const noteOverride = config.noteOverrides?.[key] || {};
   const results = Object.values(outputs).filter(Boolean);
   const findings = Object.entries(outputs).flatMap(([stage, result]) => (result.findings || []).map(row => ({ stage, ...row })));
   const byCategory = category => findings.filter(row => row.category === category);
@@ -1037,7 +1036,7 @@ function legacyRenderNoteV3(item, key, attachments, outputs, config, figureAsset
   const suggestedTitle = results.map(result => clean(result.noteTitle)).find(Boolean);
   const suggestedFolder = [outputs.note_synthesis, outputs.fulltext_analysis, outputs.method_evidence, ...results].map(result => clean(result?.libraryFolder)).find(folder => folder && !folder.includes("..") && !/[\\/]/.test(folder));
   const resolvedLibraryFolder = suggestedFolder || config.libraryFolder || "未分类";
-  const cnTitle = knownTitles[key] || suggestedTitle || item.title;
+  const cnTitle = noteOverride.title || suggestedTitle || item.title;
   const firstAuthor = item.creators[0]?.split(" ").at(-1) || "Unknown";
   const displayTitle = `${firstAuthor} et al. (${item.year || "n.d."}) — ${cnTitle}`;
   const models = Object.entries(config.stages).filter(([, value]) => value.enabled).map(([stage, value]) => `${stage}:${value.provider || "codex-subscription"}/${value.model}/${value.effort}`).join("; ");

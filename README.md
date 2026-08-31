@@ -1,5 +1,8 @@
 # Zotero 文献工作台
 
+当前版本：**v0.2.0**。本次修复综述被实验论文质量门禁误拦的问题。
+参见[更新日志](CHANGELOG.md)与[完整升级、门禁和隐私说明](docs/releases/v0.2.0.md)。
+
 一个本地优先的 Zotero → MinerU → AI → Obsidian 文献阅读工作台。它从
 Zotero Desktop 读取文献和附件，优先使用 MinerU Markdown 分析论文文本，
 在图像、图表、公式或解析疑点处回到原始 PDF，并生成可审核的 Obsidian
@@ -18,6 +21,7 @@ Markdown 笔记。
 - 支持 OpenAI、DeepSeek、Claude、自定义 OpenAI-compatible API。
 - 可选连接本机 Codex CLI；该能力取决于用户自己的 Codex 安装和账号授权。
 - 生成统一 V5 Obsidian 笔记，保留人工填写区并执行图片与证据质量门禁。
+- 根据文献类型使用原创研究或综述的固定章节；综述不要求虚构原创实验数值。
 
 ## 系统要求
 
@@ -80,13 +84,15 @@ ChatGPT Plus 或 Codex 订阅不会随本仓库分享。每个使用者必须使
 
 ## 数据与隐私
 
-以下内容只保存在本机 `data/`，且被 Git 忽略：
+以下运行数据保存在实际本地数据目录（默认 `data/`）。默认目录被 Git 忽略；如设置了自定义数据目录，需自行确保该位置不被提交：
 
 - 工作台设置和任务队列；
 - 模型阶段缓存；
 - PDF 页面和图片提取缓存；
 - 桌面浏览器配置；
 - Windows DPAPI 加密后的模型密钥。
+
+本地保存不等于全程离线：调用远程模型时，相关元数据、论文文本及所需证据会发送给所选模型提供商；请先确认你有权发送这些内容。
 
 `artifacts/`、内部迁移脚本、真实论文笔记和 UI 试运行结果同样不会进入
 公开提交。请不要通过 Issue 上传论文原文、支持材料、私人 Zotero 导出或
@@ -98,7 +104,7 @@ Obsidian 仓库。
 - 实验条件、论证逻辑和关键数值必须保留原文定位。
 - 图像、图表、公式及疑似解析错误以原始 PDF 为准。
 - 无法可靠对应图号的图片不会插入笔记。
-- 缺少原图或证据未完成时只能生成部分草稿，不能伪装成完整笔记。
+- 门禁失败时保留部分草稿；综述按范围、分类框架和综合证据检查，无可靠原图不再单独导致失败，见版本说明中的门禁表。
 - 支持材料必须与主文区分，并明确记录缺失或未核验状态。
 
 ## 开发与验证
@@ -106,10 +112,15 @@ Obsidian 仓库。
 ```powershell
 npm run check
 npm test
+node scripts/check-public-release.mjs --staged
 ```
 
 公开仓库中的测试不依赖个人 Zotero 或 Obsidian 数据。需要端到端测试时，
 请在本机准备匿名测试库，不要提交测试产生的 `data/` 或 `artifacts/`。
+
+如果本机 `npm` 命令不可用，可以直接运行 `node server.mjs` 启动，
+并用 `node --check server.mjs`、`node --check public/app.js`、
+`node --check note-v5.mjs` 和 `node test-note-v5.mjs` 完成对应检查。
 
 ## 项目结构
 
